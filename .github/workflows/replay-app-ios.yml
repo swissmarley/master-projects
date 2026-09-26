@@ -1,18 +1,17 @@
 name: Replay · iOS (unsigned IPA)
 
-# Builds replay-app/ into an *unsigned* .ipa. iOS only installs signed apps,
+# Builds the app into an *unsigned* .ipa. iOS only installs signed apps,
 # so this file is meant for sideloading tools that sign it with your own
-# Apple ID (AltStore, SideStore, Sideloadly) — see replay-app/docs/03-distribution.md.
+# Apple ID (AltStore, SideStore, Sideloadly) — see docs/03-distribution.md.
 # Published to the "replay-ios-latest" GitHub Release.
 
 on:
   push:
     paths:
-      - 'replay-app/**'
-      - '!replay-app/releases/**'
-      - '!replay-app/docs/**'
-      - '!replay-app/**/*.md'
-      - '.github/workflows/replay-app-ios.yml'
+      - '**'
+      - '!releases/**'
+      - '!docs/**'
+      - '!**/*.md'
   workflow_dispatch:
 
 permissions:
@@ -33,9 +32,6 @@ jobs:
     name: Build unsigned IPA
     runs-on: macos-latest
     timeout-minutes: 90
-    defaults:
-      run:
-        working-directory: replay-app
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +43,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: replay-app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -58,11 +53,11 @@ jobs:
         run: npx expo prebuild --platform ios --no-install
 
       - name: Install CocoaPods dependencies
-        working-directory: replay-app/ios
+        working-directory: ios
         run: pod install
 
       - name: Build unsigned archive
-        working-directory: replay-app/ios
+        working-directory: ios
         env:
           NODE_ENV: production
         run: |
@@ -109,7 +104,7 @@ jobs:
           **AltStore** / **SideStore** (on-device refresh) or **Sideloadly** (from a Mac/PC). A free Apple ID works; the app then expires after 7 days and must be refreshed.
 
           - Size: ${{ steps.ipa.outputs.size }}, SHA-256 \`${{ steps.ipa.outputs.sha256 }}\`
-          - Full guide and alternatives (TestFlight, Xcode): [replay-app/docs/03-distribution.md](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/replay-app/docs/03-distribution.md)
+          - Full guide and alternatives (TestFlight, Xcode): [docs/03-distribution.md](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/docs/03-distribution.md)
           EOF
           gh release delete "$RELEASE_TAG" --yes --cleanup-tag 2>/dev/null || true
           gh release create "$RELEASE_TAG" "$RUNNER_TEMP/out/Replay-unsigned.ipa" \

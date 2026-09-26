@@ -19,7 +19,7 @@ Listen to audio only (the default, which saves data and battery) or switch to
 
 | Android | iOS |
 |---|---|
-| **[Replay.apk](https://github.com/swissmarley/master-projects/releases/download/replay-android-latest/Replay.apk)** (latest build), or the copy in this repo: [`releases/Replay.apk`](releases/Replay.apk). Open it on your phone, allow "install unknown apps", then tap Install. | **[Replay-unsigned.ipa](https://github.com/swissmarley/master-projects/releases/download/replay-ios-latest/Replay-unsigned.ipa)**, installed with SideStore/AltStore/Sideloadly using your Apple ID (free, refresh every 7 days). Or use a paid developer account for ad hoc/TestFlight. |
+| **[Replay.apk](https://github.com/swissmarley/replay-app/releases/download/replay-android-latest/Replay.apk)** (latest build), or the copy in this repo: [`releases/Replay.apk`](releases/Replay.apk). Open it on your phone, allow "install unknown apps", then tap Install. | **[Replay-unsigned.ipa](https://github.com/swissmarley/replay-app/releases/download/replay-ios-latest/Replay-unsigned.ipa)**, installed with SideStore/AltStore/Sideloadly using your Apple ID (free, refresh every 7 days). Or use a paid developer account for ad hoc/TestFlight. |
 
 Step-by-step install guides, signing with your own key, and every iOS option:
 **[docs/03-distribution.md](docs/03-distribution.md)**. Builds are produced
@@ -76,13 +76,14 @@ Expo Go.
   locally.
 
 ```bash
+git clone https://github.com/swissmarley/replay-app.git
 cd replay-app
 npm install
 ```
 
 ### Option A: install the ready-made APK (Android, quickest)
 
-Download **[Replay.apk](https://github.com/swissmarley/master-projects/releases/download/replay-android-latest/Replay.apk)**
+Download **[Replay.apk](https://github.com/swissmarley/replay-app/releases/download/replay-android-latest/Replay.apk)**
 on the phone and install it (see [Download](#download)). To build your own
 APK in the cloud instead: `npx eas-cli@latest build --platform android --profile preview`.
 

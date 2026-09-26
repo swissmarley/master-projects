@@ -1,23 +1,22 @@
 name: Replay · Android APK
 
-# Builds replay-app/ into an installable release APK.
+# Builds the app into an installable release APK.
 # - every push that touches the app: tests + APK as a workflow artifact
 # - default branch (or manual run): publishes the APK to the
 #   "replay-android-latest" GitHub Release (stable download link) and
-#   commits it to replay-app/releases/ when the app version changed.
+#   commits it to releases/ when the app version changed.
 
 on:
   push:
     paths:
-      - 'replay-app/**'
-      - '!replay-app/releases/**'
-      - '!replay-app/docs/**'
-      - '!replay-app/**/*.md'
-      - '.github/workflows/replay-app-android.yml'
+      - '**'
+      - '!releases/**'
+      - '!docs/**'
+      - '!**/*.md'
   workflow_dispatch:
     inputs:
       commit_apk:
-        description: 'Commit the APK to replay-app/releases/ even if the version did not change'
+        description: 'Commit the APK to releases/ even if the version did not change'
         type: boolean
         default: false
 
@@ -39,9 +38,6 @@ jobs:
     name: Build release APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
-    defaults:
-      run:
-        working-directory: replay-app
     steps:
       - uses: actions/checkout@v4
 
@@ -49,7 +45,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: replay-app/package-lock.json
 
       - uses: actions/setup-java@v4
         with:
@@ -86,11 +81,11 @@ jobs:
             echo "SIGNED_WITH=your release key (REPLAY_KEYSTORE_BASE64 secret)" >> "$GITHUB_ENV"
           else
             echo "SIGNED_WITH=the public React Native debug key (add REPLAY_KEYSTORE_* secrets to use your own)" >> "$GITHUB_ENV"
-            echo "::warning title=Debug-key signing::No REPLAY_KEYSTORE_BASE64 secret. The APK is signed with the public React Native debug key. See replay-app/docs/03-distribution.md."
+            echo "::warning title=Debug-key signing::No REPLAY_KEYSTORE_BASE64 secret. The APK is signed with the public React Native debug key. See docs/03-distribution.md."
           fi
 
       - name: Build APK
-        working-directory: replay-app/android
+        working-directory: android
         env:
           NODE_ENV: production
           REPLAY_KEYSTORE_PASSWORD: ${{ secrets.REPLAY_KEYSTORE_PASSWORD }}
@@ -138,7 +133,7 @@ jobs:
           - Signed with ${SIGNED_WITH}
           - Android 7.0+ (arm64-v8a, armeabi-v7a)
 
-          This release is replaced automatically by every new build. Details: [replay-app/docs/03-distribution.md](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/replay-app/docs/03-distribution.md)
+          This release is replaced automatically by every new build. Details: [docs/03-distribution.md](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/docs/03-distribution.md)
           EOF
           gh release delete "$RELEASE_TAG" --yes --cleanup-tag 2>/dev/null || true
           gh release create "$RELEASE_TAG" "$RUNNER_TEMP/out/Replay.apk" \
@@ -172,6 +167,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add releases/Replay.apk releases/latest.json
-          git commit -m "replay-app: Replay.apk $VERSION (${{ steps.apk.outputs.sha }})"
+          git commit -m "releases: Replay.apk $VERSION (${{ steps.apk.outputs.sha }})"
           git pull --rebase --autostash origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"

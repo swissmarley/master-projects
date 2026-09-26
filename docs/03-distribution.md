@@ -3,12 +3,12 @@
 | | Android | iOS |
 |---|---|---|
 | **File** | `Replay.apk` (signed, installable) | `Replay-unsigned.ipa` (needs signing on install) |
-| **Latest build** | [Replay.apk](https://github.com/swissmarley/master-projects/releases/download/replay-android-latest/Replay.apk) | [Replay-unsigned.ipa](https://github.com/swissmarley/master-projects/releases/download/replay-ios-latest/Replay-unsigned.ipa) |
-| **In the repo** | [`replay-app/releases/Replay.apk`](../releases/Replay.apk) | — |
-| **Built by** | [`.github/workflows/replay-app-android.yml`](../../.github/workflows/replay-app-android.yml) | [`.github/workflows/replay-app-ios.yml`](../../.github/workflows/replay-app-ios.yml) |
+| **Latest build** | [Replay.apk](https://github.com/swissmarley/replay-app/releases/download/replay-android-latest/Replay.apk) | [Replay-unsigned.ipa](https://github.com/swissmarley/replay-app/releases/download/replay-ios-latest/Replay-unsigned.ipa) |
+| **In the repo** | [`releases/Replay.apk`](../releases/Replay.apk) | — |
+| **Built by** | [`.github/workflows/replay-app-android.yml`](../.github/workflows/replay-app-android.yml) | [`.github/workflows/replay-app-ios.yml`](../.github/workflows/replay-app-ios.yml) |
 
 Both workflows run on GitHub's servers (free for this public repo) whenever
-something in `replay-app/` changes, and replace the "latest build" releases
+the app changes, and replace the "latest build" releases
 when the build succeeds (the Android workflow runs the full test suite first).
 The APK in the repo is refreshed whenever the app version in `app.json`
 changes, or when you run the Android workflow by hand with **Commit the APK**
@@ -76,7 +76,7 @@ updates can't be installed over existing installs.
 - **Cloud (EAS):** `npx eas-cli@latest build -p android --profile preview` gives an APK link.
 - **Locally:** with Android SDK 36, NDK 27.1.12297006 and JDK 17 installed:
   ```bash
-  cd replay-app && npm ci
+  npm ci
   npx expo prebuild -p android
   cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
   # → android/app/build/outputs/apk/release/app-release.apk
@@ -111,7 +111,7 @@ required.
    after a one-time setup with a computer) or **[AltStore](https://altstore.io)**
    (needs AltServer running on a Mac/PC on the same Wi-Fi to refresh).
 2. On the iPhone, download
-   [`Replay-unsigned.ipa`](https://github.com/swissmarley/master-projects/releases/download/replay-ios-latest/Replay-unsigned.ipa).
+   [`Replay-unsigned.ipa`](https://github.com/swissmarley/replay-app/releases/download/replay-ios-latest/Replay-unsigned.ipa).
 3. Open it with SideStore/AltStore (*Share → SideStore*, or **+** inside the
    app). It signs the app with your Apple ID and installs it.
 4. On iOS 16+, enable **Developer Mode** when asked
@@ -124,10 +124,16 @@ Mac/PC, connect the iPhone, drag in the IPA, and enter your Apple ID. Then
 trust the profile under *Settings → General → VPN & Device Management*.
 Repeat every 7 days.
 
+**"No provisioning profile embedded"?** That message comes from link-based
+installers (such as "IPA Installer" or Diawi). They only install IPAs that are
+*already* signed for your device, and this one is unsigned on purpose. Use
+SideStore, AltStore or Sideloadly instead; they sign it with your Apple ID
+while installing. For a link install, sign it first with a paid developer
+account (see the EAS ad hoc route below).
+
 ### Paid route: Apple Developer Program + EAS (no Mac needed)
 
 ```bash
-cd replay-app
 npx eas-cli@latest login
 npx eas-cli@latest device:create                      # register your iPhone(s) via a link
 npx eas-cli@latest build -p ios --profile preview     # ad hoc build → install link / QR code
