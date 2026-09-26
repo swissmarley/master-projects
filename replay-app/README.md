@@ -15,6 +15,16 @@ Listen to audio only (the default, which saves data and battery) or switch to
 > designed: [docs/01-brainstorm.md](docs/01-brainstorm.md) (research and
 > options) and [docs/02-plan.md](docs/02-plan.md) (architecture and milestones).
 
+## Download
+
+| Android | iOS |
+|---|---|
+| **[Replay.apk](https://github.com/swissmarley/master-projects/releases/download/replay-android-latest/Replay.apk)** (latest build), or the copy in this repo: [`releases/Replay.apk`](releases/Replay.apk). Open it on your phone, allow "install unknown apps", then tap Install. | **[Replay-unsigned.ipa](https://github.com/swissmarley/master-projects/releases/download/replay-ios-latest/Replay-unsigned.ipa)**, installed with SideStore/AltStore/Sideloadly using your Apple ID (free, refresh every 7 days). Or use a paid developer account for ad hoc/TestFlight. |
+
+Step-by-step install guides, signing with your own key, and every iOS option:
+**[docs/03-distribution.md](docs/03-distribution.md)**. Builds are produced
+automatically by GitHub Actions on every change (`.github/workflows/replay-app-*.yml`).
+
 ---
 
 ## Features
@@ -70,15 +80,11 @@ cd replay-app
 npm install
 ```
 
-### Option A: install an APK on Android (quickest)
+### Option A: install the ready-made APK (Android, quickest)
 
-```bash
-npx eas-cli@latest login
-npx eas-cli@latest build --platform android --profile preview
-```
-
-When it finishes, open the link on your phone and install the APK. That's the
-full app, and no computer is needed afterwards.
+Download **[Replay.apk](https://github.com/swissmarley/master-projects/releases/download/replay-android-latest/Replay.apk)**
+on the phone and install it (see [Download](#download)). To build your own
+APK in the cloud instead: `npx eas-cli@latest build --platform android --profile preview`.
 
 ### Option B: development build (for hacking on the code)
 

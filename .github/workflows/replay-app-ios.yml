@@ -1,0 +1,115 @@
+name: Replay · iOS (unsigned IPA)
+
+# Builds replay-app/ into an *unsigned* .ipa. iOS only installs signed apps,
+# so this file is meant for sideloading tools that sign it with your own
+# Apple ID (AltStore, SideStore, Sideloadly) — see replay-app/docs/03-distribution.md.
+# Published to the "replay-ios-latest" GitHub Release.
+
+on:
+  push:
+    paths:
+      - 'replay-app/**'
+      - '!replay-app/releases/**'
+      - '!replay-app/docs/**'
+      - '!replay-app/**/*.md'
+      - '.github/workflows/replay-app-ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: replay-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RELEASE_TAG: replay-ios-latest
+  EXPO_NO_TELEMETRY: 1
+
+jobs:
+  ipa:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: replay-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: replay-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate native project
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Install CocoaPods dependencies
+        working-directory: replay-app/ios
+        run: pod install
+
+      - name: Build unsigned archive
+        working-directory: replay-app/ios
+        env:
+          NODE_ENV: production
+        run: |
+          xcodebuild -quiet archive \
+            -workspace Replay.xcworkspace \
+            -scheme Replay \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Replay.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        id: ipa
+        run: |
+          APP="$RUNNER_TEMP/Replay.xcarchive/Products/Applications/Replay.app"
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :UIBackgroundModes' "$APP/Info.plist"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/out"
+          cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$RUNNER_TEMP/out/Replay-unsigned.ipa" Payload)
+          {
+            echo "version=$(node -p "require('./app.json').expo.version")"
+            echo "sha=${GITHUB_SHA::7}"
+            echo "size=$(du -h "$RUNNER_TEMP/out/Replay-unsigned.ipa" | cut -f1)"
+            echo "sha256=$(shasum -a 256 "$RUNNER_TEMP/out/Replay-unsigned.ipa" | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Replay-${{ steps.ipa.outputs.version }}-${{ steps.ipa.outputs.sha }}-ios-unsigned
+          path: ${{ runner.temp }}/out/Replay-unsigned.ipa
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<EOF
+          **Replay ${{ steps.ipa.outputs.version }}** for iOS, built from \`${{ steps.ipa.outputs.sha }}\` on \`${{ github.ref_name }}\`.
+
+          This IPA is **unsigned**. iOS only runs signed apps, so install it with a sideloading tool that signs it with your Apple ID:
+          **AltStore** / **SideStore** (on-device refresh) or **Sideloadly** (from a Mac/PC). A free Apple ID works; the app then expires after 7 days and must be refreshed.
+
+          - Size: ${{ steps.ipa.outputs.size }}, SHA-256 \`${{ steps.ipa.outputs.sha256 }}\`
+          - Full guide and alternatives (TestFlight, Xcode): [replay-app/docs/03-distribution.md](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/replay-app/docs/03-distribution.md)
+          EOF
+          gh release delete "$RELEASE_TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/out/Replay-unsigned.ipa" \
+            --target "$GITHUB_SHA" \
+            --title "Replay for iOS (latest build, unsigned)" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest=false

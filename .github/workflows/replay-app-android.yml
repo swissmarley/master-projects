@@ -1,0 +1,172 @@
+name: Replay · Android APK
+
+# Builds replay-app/ into an installable release APK.
+# - every push that touches the app: tests + APK as a workflow artifact
+# - default branch (or manual run): publishes the APK to the
+#   "replay-android-latest" GitHub Release (stable download link) and
+#   commits it to replay-app/releases/ when the app version changed.
+
+on:
+  push:
+    paths:
+      - 'replay-app/**'
+      - '!replay-app/releases/**'
+      - '!replay-app/docs/**'
+      - '!replay-app/**/*.md'
+      - '.github/workflows/replay-app-android.yml'
+  workflow_dispatch:
+    inputs:
+      commit_apk:
+        description: 'Commit the APK to replay-app/releases/ even if the version did not change'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: replay-android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RELEASE_TAG: replay-android-latest
+  EXPO_NO_TELEMETRY: 1
+
+jobs:
+  apk:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: replay-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: replay-app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck, lint and test
+        run: npm run check
+
+      - name: Install Android SDK packages
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" "cmake;3.30.5" > /dev/null
+
+      - name: Generate native project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Prepare signing key (optional)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.REPLAY_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/replay.keystore"
+            echo "REPLAY_KEYSTORE_FILE=$RUNNER_TEMP/replay.keystore" >> "$GITHUB_ENV"
+            echo "SIGNED_WITH=your release key (REPLAY_KEYSTORE_BASE64 secret)" >> "$GITHUB_ENV"
+          else
+            echo "SIGNED_WITH=the public React Native debug key (add REPLAY_KEYSTORE_* secrets to use your own)" >> "$GITHUB_ENV"
+            echo "::warning title=Debug-key signing::No REPLAY_KEYSTORE_BASE64 secret. The APK is signed with the public React Native debug key. See replay-app/docs/03-distribution.md."
+          fi
+
+      - name: Build APK
+        working-directory: replay-app/android
+        env:
+          NODE_ENV: production
+          REPLAY_KEYSTORE_PASSWORD: ${{ secrets.REPLAY_KEYSTORE_PASSWORD }}
+          REPLAY_KEY_ALIAS: ${{ secrets.REPLAY_KEY_ALIAS }}
+          REPLAY_KEY_PASSWORD: ${{ secrets.REPLAY_KEY_PASSWORD }}
+        run: |
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/' gradle.properties
+          # arm64-v8a + armeabi-v7a cover virtually every Android phone.
+          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Verify and name the APK
+        id: apk
+        run: |
+          APK="$RUNNER_TEMP/out/Replay.apk"
+          mkdir -p "$RUNNER_TEMP/out"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK"
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          "$BUILD_TOOLS/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|native-code|uses-permission)"
+          {
+            echo "version=$(node -p "require('./app.json').expo.version")"
+            echo "sha=${GITHUB_SHA::7}"
+            echo "size=$(du -h "$APK" | cut -f1)"
+            echo "sha256=$(sha256sum "$APK" | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Replay-${{ steps.apk.outputs.version }}-${{ steps.apk.outputs.sha }}-android
+          path: ${{ runner.temp }}/out/Replay.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<EOF
+          **Replay ${{ steps.apk.outputs.version }}** for Android, built from \`${{ steps.apk.outputs.sha }}\` on \`${{ github.ref_name }}\`.
+
+          **Install:** open this page on your Android phone, tap **Replay.apk**, allow your browser to *install unknown apps* when asked, then open the downloaded file.
+
+          - Size: ${{ steps.apk.outputs.size }}, SHA-256 \`${{ steps.apk.outputs.sha256 }}\`
+          - Signed with ${SIGNED_WITH}
+          - Android 7.0+ (arm64-v8a, armeabi-v7a)
+
+          This release is replaced automatically by every new build. Details: [replay-app/docs/03-distribution.md](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/replay-app/docs/03-distribution.md)
+          EOF
+          gh release delete "$RELEASE_TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/out/Replay.apk" \
+            --target "$GITHUB_SHA" \
+            --title "Replay for Android (latest build)" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest
+
+      - name: Commit APK to the repository
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+        env:
+          FORCE: ${{ inputs.commit_apk }}
+        run: |
+          VERSION="${{ steps.apk.outputs.version }}"
+          CURRENT=$(node -e "try { console.log(require('./releases/latest.json').version) } catch { console.log('') }")
+          if [ "$FORCE" != "true" ] && [ "$CURRENT" = "$VERSION" ]; then
+            echo "releases/Replay.apk is already version $VERSION; the GitHub Release has the newest build."
+            exit 0
+          fi
+          mkdir -p releases
+          cp "$RUNNER_TEMP/out/Replay.apk" releases/Replay.apk
+          cat > releases/latest.json <<EOF
+          {
+            "version": "$VERSION",
+            "commit": "$GITHUB_SHA",
+            "sha256": "${{ steps.apk.outputs.sha256 }}",
+            "size": "${{ steps.apk.outputs.size }}",
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add releases/Replay.apk releases/latest.json
+          git commit -m "replay-app: Replay.apk $VERSION (${{ steps.apk.outputs.sha }})"
+          git pull --rebase --autostash origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
