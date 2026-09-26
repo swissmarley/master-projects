@@ -86,9 +86,10 @@ describe('parsePlayerResponse', () => {
 
   it('drops DRM and non-https formats', () => {
     const response = okResponse();
-    response.streamingData.formats = [
-      { ...response.streamingData.formats[0], drmFamilies: ['WIDEVINE'] },
-      { ...response.streamingData.formats[0], url: 'http://insecure.example/x' },
+    const muxed = response.streamingData.formats[0];
+    (response.streamingData as Record<string, unknown>).formats = [
+      { ...muxed, drmFamilies: ['WIDEVINE'] },
+      { ...muxed, url: 'http://insecure.example/x' },
     ];
     expect(parsePlayerResponse(response).formats.filter((f) => f.itag === 18)).toEqual([]);
   });

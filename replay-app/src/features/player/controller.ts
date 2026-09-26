@@ -264,6 +264,7 @@ export class PlayerController {
       error: null,
       source: null,
       hasVideo: false,
+      isLive: false,
       queue: { ...this.get().queue, items: [], order: [], cursor: -1 },
     });
     this.deps.persistence?.save(null);
@@ -296,7 +297,8 @@ export class PlayerController {
     const track = this.track(id);
     this.set({
       currentId: id,
-      status: 'resolving',
+      // A load that won't autoplay (e.g. mode switch while paused) stays "paused".
+      status: autoplay ? 'resolving' : 'paused',
       error: null,
       buffering: false,
       position: startAt,
@@ -318,7 +320,12 @@ export class PlayerController {
     this.current = streams;
     const mode = this.get().mode;
     const ref = this.pickStream(streams, mode);
-    this.set({ status: 'loading', source: streams.source, hasVideo: streams.video !== null });
+    this.set({
+      status: this.playIntent ? 'loading' : 'paused',
+      source: streams.source,
+      hasVideo: streams.video !== null,
+      isLive: streams.details?.isLive === true,
+    });
     this.enrichTrack(id, streams);
 
     try {

@@ -233,10 +233,10 @@ iOS, progressive MP4 on Android). One capture at a time, 25 s timeout.
 |---|---|---|
 | M0 | Research, brainstorm, plan | ✅ |
 | M1 | Core domain: URL parsing, library store, queue (+ tests) | ✅ |
-| M2 | Resolver chain: Innertube, formats, cache, capture, remote (+ tests) | 🚧 |
-| M3 | Browser: page script (+ jsdom tests), browser screen, add flow | 🚧 |
-| M4 | Player: controller (+ tests with fake engine), engine, mini/full player | 🚧 |
-| M5 | Library/Settings screens, deep links, polish | 🚧 |
+| M2 | Resolver chain: Innertube, formats, cache, capture, remote (+ tests) | ✅ |
+| M3 | Browser: page script (+ jsdom tests), browser screen, add flow | ✅ |
+| M4 | Player: controller (+ tests with fake engine), engine, mini/full player | ✅ |
+| M5 | Library/Settings screens, deep links, polish, app-level render tests | ✅ |
 | M6 | On-device QA with a development build (see README checklist) | ⏳ needs a phone |
 
 ## 10. Roadmap
@@ -258,6 +258,7 @@ iOS, progressive MP4 on Android). One capture at a time, 25 s timeout.
 |---|---|
 | Pure logic (URL parsing, queue, store, formats, cache, chain, controller) | Jest unit tests with fakes |
 | Injected scripts (page + capture) | Jest + jsdom, running the real script source |
+| Screens and navigation | `expo-router/testing-library` renders the real route tree (native modules faked) |
 | Types / lint | `tsc --noEmit`, `expo lint` |
 | Bundling | `expo export` for Android and iOS (proves every import resolves under Metro/Hermes) |
 | Native config | `expo prebuild` into a temp dir, then assert `UIBackgroundModes`, foreground service, intent filters |

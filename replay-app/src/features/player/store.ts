@@ -29,6 +29,8 @@ export type PlayerSnapshot = {
   source: ResolverName | null;
   /** Whether the current stream has a picture. */
   hasVideo: boolean;
+  /** Live stream (no duration, no seeking). */
+  isLive: boolean;
   /** Epoch ms when the sleep timer pauses playback. */
   sleepAt: number | null;
 };
@@ -46,6 +48,7 @@ export const INITIAL_SNAPSHOT: PlayerSnapshot = {
   error: null,
   source: null,
   hasVideo: false,
+  isLive: false,
   sleepAt: null,
 };
 

@@ -1,40 +1,102 @@
 {
   "expo": {
-    "name": "replay-app",
-    "slug": "replay-app",
+    "name": "Replay",
+    "slug": "replay",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "replayapp",
-    "userInterfaceStyle": "automatic",
+    "scheme": "replay",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B0F",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.swissmarley.replay",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.swissmarley.replay",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png",
+        "backgroundColor": "#0B0B0F"
       },
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "youtube.com",
+              "pathPrefix": "/watch"
+            },
+            {
+              "scheme": "https",
+              "host": "www.youtube.com",
+              "pathPrefix": "/watch"
+            },
+            {
+              "scheme": "https",
+              "host": "m.youtube.com",
+              "pathPrefix": "/watch"
+            },
+            {
+              "scheme": "https",
+              "host": "music.youtube.com",
+              "pathPrefix": "/watch"
+            },
+            {
+              "scheme": "https",
+              "host": "www.youtube.com",
+              "pathPrefix": "/shorts"
+            },
+            {
+              "scheme": "https",
+              "host": "m.youtube.com",
+              "pathPrefix": "/shorts"
+            },
+            {
+              "scheme": "https",
+              "host": "youtu.be"
+            }
+          ]
+        }
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "expo-router",
       [
-        "expo-splash-screen",
+        "expo-video",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
         }
       ],
-      "expo-video",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0B0F",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 160
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
