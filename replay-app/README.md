@@ -182,16 +182,21 @@ are first-party Expo modules behind small adapters.
 
 ### What's verified, and what needs a phone
 
-Verified in CI-like conditions (this repo's container):
+Verified automatically on every change (GitHub Actions, see `.github/workflows/replay-app-*.yml`):
 
 - Tests: queue, library, resolvers (with realistic YouTube response fixtures),
   controller (auto-advance, retries, mode switching…), the injected browser and
   capture scripts (run in jsdom), and full-app rendering through Expo Router.
-- Strict typecheck, lint, Metro/Hermes bundles for iOS and Android.
-- `expo prebuild` output: iOS `UIBackgroundModes: audio`, Android
-  `FOREGROUND_SERVICE_MEDIA_PLAYBACK` + Media3 session service, PiP, intent filters.
+  Strict typecheck and lint.
+- A full native **Android release build**. The APK is then checked: signature,
+  SDK levels, permissions, ABIs, and Hermes bundle.
+- A full native **iOS build** (Xcode archive, unsigned), including a check
+  that `UIBackgroundModes` contains `audio`.
+- The generated native projects include iOS `UIBackgroundModes: audio`, and on
+  Android `FOREGROUND_SERVICE_MEDIA_PLAYBACK` + the Media3 session service,
+  picture-in-picture and the YouTube intent filters.
 
-Needs a real device (the container can't reach YouTube or compile native code):
+Needs a real device (CI can't play YouTube or tap through the UI):
 
 - [ ] Browse, add from the page and from thumbnails, links and ✓ states
 - [ ] Audio playback starts; lock the phone: keeps playing, lock-screen controls work
