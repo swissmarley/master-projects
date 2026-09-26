@@ -23,7 +23,8 @@ export type PageMeta = {
 export type PageMessage =
   | { type: 'page'; url: string; title?: string; video: PageMeta | null }
   | { type: 'add'; source: 'thumbnail'; video: PageMeta }
-  | { type: 'media'; state: 'playing' | 'paused' };
+  | { type: 'media'; state: 'playing' | 'paused' }
+  | { type: 'session'; visitorData: string };
 
 export type PageCommand =
   | { type: 'pauseMedia' }
@@ -262,6 +263,21 @@ const SCRIPT = String.raw`
     }, 250);
   }
 
+  // ---- Session ----------------------------------------------------------------
+  // YouTube's anonymous visitor ID, reused by the app's own stream requests.
+  var sessionSent = false;
+  function emitSession() {
+    if (sessionSent) return;
+    try {
+      var config = window.ytcfg;
+      var visitorData = config && typeof config.get === 'function' ? config.get('VISITOR_DATA') : null;
+      if (visitorData) {
+        sessionSent = true;
+        post({ type: 'session', visitorData: String(visitorData) });
+      }
+    } catch (e) {}
+  }
+
   // ---- Page media -------------------------------------------------------------
   function isMedia(target) {
     return target && target.tagName && /^(VIDEO|AUDIO)$/.test(target.tagName);
@@ -285,6 +301,7 @@ const SCRIPT = String.raw`
   // ---- Lifecycle --------------------------------------------------------------
   function start() {
     emitState(true);
+    emitSession();
     decorate();
     observe(document.documentElement, scheduleDecorate, { childList: true, subtree: true });
     var titleEl = document.querySelector('title');
@@ -296,7 +313,10 @@ const SCRIPT = String.raw`
 
   // Cheap safety net for navigations that bypass the hooks above and for
   // metadata (duration, player title) that appears after the URL changes.
-  var interval = setInterval(emitState, 1500);
+  var interval = setInterval(function () {
+    emitState();
+    emitSession();
+  }, 1500);
   cleanups.push(function () { clearInterval(interval); });
 
   window.__replayPage = {
@@ -347,6 +367,8 @@ export function parsePageMessage(raw: string): PageMessage | null {
         return message.video && typeof message.video.videoId === 'string' ? message : null;
       case 'media':
         return message.state === 'playing' || message.state === 'paused' ? message : null;
+      case 'session':
+        return typeof message.visitorData === 'string' ? message : null;
       default:
         return null;
     }

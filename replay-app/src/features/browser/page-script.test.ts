@@ -213,6 +213,21 @@ describe('page script: media', () => {
   });
 });
 
+describe('page script: session', () => {
+  it('reports the visitor id once it appears in ytcfg', () => {
+    const page = install();
+    expect(page.last('session')).toBeUndefined();
+    (window as unknown as { ytcfg: unknown }).ytcfg = {
+      get: (key: string) => (key === 'VISITOR_DATA' ? 'CgtWSVNJVE9SX0lE' : undefined),
+    };
+    jest.advanceTimersByTime(1500);
+    expect(page.last('session')).toEqual({ type: 'session', visitorData: 'CgtWSVNJVE9SX0lE' });
+    jest.advanceTimersByTime(3000);
+    expect(page.messages().filter((m) => m.type === 'session')).toHaveLength(1);
+    delete (window as unknown as { ytcfg?: unknown }).ytcfg;
+  });
+});
+
 describe('parsePageMessage', () => {
   it('accepts well-formed messages and rejects everything else', () => {
     expect(parsePageMessage('{"type":"media","state":"playing"}')).toEqual({
@@ -222,6 +237,8 @@ describe('parsePageMessage', () => {
     expect(parsePageMessage('{"type":"add","video":{"videoId":"x"}}')).not.toBeNull();
     expect(parsePageMessage('{"type":"add","video":{}}')).toBeNull();
     expect(parsePageMessage('{"type":"page"}')).toBeNull();
+    expect(parsePageMessage('{"type":"session","visitorData":"abc"}')).not.toBeNull();
+    expect(parsePageMessage('{"type":"session"}')).toBeNull();
     expect(parsePageMessage('{"type":"evil"}')).toBeNull();
     expect(parsePageMessage('not json')).toBeNull();
     expect(parsePageMessage('null')).toBeNull();
