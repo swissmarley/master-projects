@@ -8,10 +8,17 @@
 | **Built by** | [`.github/workflows/replay-app-android.yml`](../../.github/workflows/replay-app-android.yml) | [`.github/workflows/replay-app-ios.yml`](../../.github/workflows/replay-app-ios.yml) |
 
 Both workflows run on GitHub's servers (free for this public repo) whenever
-something in `replay-app/` changes, and after tests pass they replace the
-"latest build" releases. The APK in the repo is refreshed whenever the app
-version in `app.json` changes, or when you run the Android workflow by hand
-with **Commit the APK** ticked. The release link always has the newest build.
+something in `replay-app/` changes, and replace the "latest build" releases
+when the build succeeds (the Android workflow runs the full test suite first).
+The APK in the repo is refreshed whenever the app version in `app.json`
+changes, or when you run the Android workflow by hand with **Commit the APK**
+ticked. The release link always has the newest build.
+
+If a **Publish GitHub Release** step fails with HTTP 403 ("Resource not
+accessible by integration"), a newer commit changed a workflow file while that
+run was building. GitHub doesn't let the workflow token tag a commit whose
+workflow files differ from the default branch. The run for the newer commit
+publishes instead, or you can re-run the workflow from the Actions tab.
 
 ---
 
@@ -90,6 +97,8 @@ of "download the APK and tap install". The realistic options:
 | **Apple Developer Program + EAS ad hoc** | $99/year | no (cloud build) | 1 year | Install from a link on registered iPhones (up to 100 per device type) |
 | **TestFlight, internal testers** | $99/year | no | 90 days per build | Up to 100 people on your App Store Connect team; no review |
 | App Store / public TestFlight | $99/year | — | — | **Would almost certainly be rejected**: App Review guideline 5.2.3 and YouTube's terms prohibit background/third-party playback of YouTube content |
+
+Requirements: iOS 16.4 or newer, on an iPhone or iPad.
 
 Sideloaded builds behave like any other build: background audio, lock-screen
 controls and picture-in-picture only need the `audio` background mode in
