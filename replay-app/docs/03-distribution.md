@@ -31,7 +31,9 @@ armeabi-v7a, which covers practically every phone; x86 emulators aren't
 included).
 
 **Updating:** install a newer `Replay.apk` over the old one. Your playlists
-stay. Android only accepts the update if it's signed with the same key (see below).
+stay. Each CI build gets a higher build number (the workflow run number), so
+Android treats it as an update. Android only accepts the update if it's signed
+with the same key (see below).
 
 ### Signing (read before sharing the app widely)
 

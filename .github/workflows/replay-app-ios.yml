@@ -18,9 +18,11 @@ on:
 permissions:
   contents: write
 
+# Queue rather than cancel: a cancelled run could stop between deleting and
+# re-creating the release, leaving the download link broken.
 concurrency:
   group: replay-ios-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   RELEASE_TAG: replay-ios-latest
@@ -51,6 +53,8 @@ jobs:
         run: npm ci
 
       - name: Generate native project
+        env:
+          REPLAY_BUILD_NUMBER: ${{ github.run_number }}
         run: npx expo prebuild --platform ios --no-install
 
       - name: Install CocoaPods dependencies
@@ -99,7 +103,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > "$RUNNER_TEMP/notes.md" <<EOF
-          **Replay ${{ steps.ipa.outputs.version }}** for iOS, built from \`${{ steps.ipa.outputs.sha }}\` on \`${{ github.ref_name }}\`.
+          **Replay ${{ steps.ipa.outputs.version }} (build ${{ github.run_number }})** for iOS, built from \`${{ steps.ipa.outputs.sha }}\` on \`${{ github.ref_name }}\`.
 
           This IPA is **unsigned**. iOS only runs signed apps, so install it with a sideloading tool that signs it with your Apple ID:
           **AltStore** / **SideStore** (on-device refresh) or **Sideloadly** (from a Mac/PC). A free Apple ID works; the app then expires after 7 days and must be refreshed.

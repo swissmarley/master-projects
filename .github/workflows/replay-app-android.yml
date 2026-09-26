@@ -24,9 +24,11 @@ on:
 permissions:
   contents: write
 
+# Queue rather than cancel: a cancelled run could stop between deleting and
+# re-creating the release, leaving the download link broken.
 concurrency:
   group: replay-android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   RELEASE_TAG: replay-android-latest
@@ -69,6 +71,9 @@ jobs:
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" "cmake;3.30.5" > /dev/null
 
       - name: Generate native project
+        env:
+          # Increasing versionCode, so each build installs as an update.
+          REPLAY_BUILD_NUMBER: ${{ github.run_number }}
         run: npx expo prebuild --platform android --no-install
 
       - name: Prepare signing key (optional)
@@ -125,7 +130,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > "$RUNNER_TEMP/notes.md" <<EOF
-          **Replay ${{ steps.apk.outputs.version }}** for Android, built from \`${{ steps.apk.outputs.sha }}\` on \`${{ github.ref_name }}\`.
+          **Replay ${{ steps.apk.outputs.version }} (build ${{ github.run_number }})** for Android, built from \`${{ steps.apk.outputs.sha }}\` on \`${{ github.ref_name }}\`.
 
           **Install:** open this page on your Android phone, tap **Replay.apk**, allow your browser to *install unknown apps* when asked, then open the downloaded file.
 
